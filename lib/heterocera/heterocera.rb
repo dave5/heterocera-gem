@@ -28,7 +28,7 @@ module Heterocera
       resp = @agent.get get(READ, tags, suffix)
       case suffix
       when JSON_EXT
-        JSON.parse(resp.body)
+        JSON.parse(resp.body)   
       when XML_EXT
       when GZ_EXT
       else
@@ -47,8 +47,10 @@ module Heterocera
     # def write_file(tags = [], path_to_file)
     # end
 
-    # def take(guid)
-    # end
+    def take(guid)
+      resp = @agent.get get(TAKE, [guid])
+      resp.code == "200"
+    end
 
     private
 
