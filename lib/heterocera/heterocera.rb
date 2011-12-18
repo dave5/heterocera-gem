@@ -8,9 +8,9 @@ module Heterocera
 
   class Client
 
-    READ = "read"
+    READ  = "read"
     WRITE = "write"
-    TAKE = "take"
+    TAKE  = "take"
 
     XML_EXT   = ".xml"
     GZ_EXT    = ".gz"
@@ -21,44 +21,80 @@ module Heterocera
 
     def initialize server_address
       @base_address = URI.parse server_address
-      @agent = Mechanize.new
+      @agent        = Mechanize.new
+
+      true
     end
 
-    def read(tags = [], suffix = JSON_EXT)
-      resp = @agent.get get(READ, tags, suffix)
+    def server_address 
+      @base_address
+    end
+
+    def server_address= server_address
+      @base_address = URI.parse server_address
+    end
+
+    def read(tags = [], suffix = "")
+      resp = get(READ, tags, suffix).body
+
       case suffix
       when JSON_EXT
-        JSON.parse(resp.body)   
+        resp   
       when XML_EXT
+        resp
       when GZ_EXT
+        # get response
+        # pass back temp file
       else
-        resp.body
+        JSON.parse(resp)
       end
+
     end
 
     def write(tags = [], value = "")
-      resp = @agent.get "#{get(WRITE, tags)}?value=#{value}"
-      JSON.parse(resp.body)
-    end
+      if value.class == String
+        if value.bytesize < 1024
+          resp = get(WRITE, tags, value).body
+        else
+          resp = post(WRITE, tags, value).body
+        end
+      else
+        resp = post(WRITE, tags, value).body
+      end
 
-    # def write_post_data(tags = [], json)
-    # end
+      JSON.parse resp
+    end
 
     # def write_file(tags = [], path_to_file)
     # end
 
     def take(guid)
-      resp = @agent.get get(TAKE, [guid])
+      resp = get(TAKE, [guid])
       resp.code == "200"
     end
 
     private
 
-      def get tuple_space_operation, tags, suffix = ""
-        request = "http://#{@base_address.host}:#{@base_address.port}/#{tuple_space_operation}/#{tags.to_path}"
-        request << suffix if (suffix.present? && ACCEPTED_SUFFIXES.include?(suffix))
+      def generate_url tuple_space_operation, tags
+        "http://#{@base_address.host}:#{@base_address.port}/#{tuple_space_operation}/#{tags.to_path}"
+      end
 
-        request
+      def get tuple_space_operation, tags, value = "", suffix = ""
+        request = generate_url tuple_space_operation, tags
+
+        if (suffix.present? && ACCEPTED_SUFFIXES.include?(suffix))
+          request << suffix 
+        elsif value.present?
+          request << "?value=#{value}" 
+        end
+
+        @agent.get request
+      end
+
+      def post tuple_space_operation, tags, value = ""
+        request = generate_url tuple_space_operation, tags
+      
+        @agent.post(request, {"value" => value})
       end
   end
 
