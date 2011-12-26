@@ -22,8 +22,6 @@ module Heterocera
     def initialize server_address
       @base_address = URI.parse server_address
       @agent        = Mechanize.new
-
-      true
     end
 
     def server_address 
@@ -52,21 +50,23 @@ module Heterocera
     end
 
     def write(tags = [], value = "")
-      if value.class == String
+      raise ArgumentError, 'You must provide a String or a File'  unless value.class == String || value.class == File
+      raise ArgumentError, "You can't use wildcards when writing" if tags.include? '*'
+
+      case value.class.to_s 
+      when "String"
         if value.bytesize < 1024
           resp = get(WRITE, tags, value).body
         else
           resp = post(WRITE, tags, value).body
         end
-      else
+      when "File"
+        raise TypeError, 'Please open files in binary mode' unless value.binmode?
         resp = post(WRITE, tags, value).body
       end
 
       JSON.parse resp
     end
-
-    # def write_file(tags = [], path_to_file)
-    # end
 
     def take(guid)
       resp = get(TAKE, [guid])
@@ -76,10 +76,14 @@ module Heterocera
     private
 
       def generate_url tuple_space_operation, tags
+        raise ArgumentError, "You must provide an array of tags ['foo', 'baa']" if tags.length == 0
+
         "http://#{@base_address.host}:#{@base_address.port}/#{tuple_space_operation}/#{tags.to_path}"
       end
 
       def get tuple_space_operation, tags, value = "", suffix = ""
+        raise ArgumentError, 'You must provide a value' if value.blank? && tuple_space_operation == WRITE
+
         request = generate_url tuple_space_operation, tags
 
         if (suffix.present? && ACCEPTED_SUFFIXES.include?(suffix))
@@ -92,9 +96,11 @@ module Heterocera
       end
 
       def post tuple_space_operation, tags, value = ""
+        raise TypeError, 'You must provide a value' unless value.present?
+
         request = generate_url tuple_space_operation, tags
-      
         @agent.post(request, {"value" => value})
+
       end
   end
 
