@@ -6,10 +6,10 @@ Gem::Specification.new do |s|
   s.name        = "heterocera"
   s.version     = Heterocera::VERSION
   s.authors     = ["Dave ten Have"]
-  s.email       = ["david@ponoko.com"]
-  s.homepage    = ""
-  s.summary     = ""
-  s.description = ""
+  s.email       = ["david@heterocera.com"]
+  s.homepage    = "http://www.heterocera.com"
+  s.summary     = "gem for talking to heterocera server"
+  s.description = "A simple wrapper for talking to the heterocera server"
 
   s.rubyforge_project = "heterocera"
 
