@@ -12,12 +12,12 @@ module Heterocera
     WRITE = "write"
     TAKE  = "take"
 
-    XML_EXT   = ".xml"
-    GZ_EXT    = ".gz"
-    HTML_EXT  = ".html"
-    JSON_EXT  = ".json"
-
-    ACCEPTED_SUFFIXES = [XML_EXT, GZ_EXT, HTML_EXT, JSON_EXT]
+    # get .json for free
+    XML   = ".xml"
+    GZ    = ".gz"
+    HTML  = ".html"
+    
+    OTHER_SUFFIXES = [XML, GZ, HTML]
 
     def initialize server_address
       @base_address = URI.parse server_address
@@ -33,16 +33,13 @@ module Heterocera
     end
 
     def read(tags = [], suffix = "")
-      resp = get(READ, tags, suffix).body
+      resp = get(READ, tags, "", suffix).body
 
       case suffix
-      when JSON_EXT
-        resp   
-      when XML_EXT
+      when XML
         resp
-      when GZ_EXT
-        # get response
-        # pass back temp file
+      when GZ
+        resp
       else
         JSON.parse(resp)
       end
@@ -86,7 +83,7 @@ module Heterocera
 
         request = generate_url tuple_space_operation, tags
 
-        if (suffix.present? && ACCEPTED_SUFFIXES.include?(suffix))
+        if (suffix.present? && OTHER_SUFFIXES.include?(suffix))
           request << suffix 
         elsif value.present?
           request << "?value=#{value}" 
