@@ -78,7 +78,7 @@ module Heterocera
         if (suffix.present? && OTHER_SUFFIXES.include?(suffix))
           request << suffix 
         elsif value.present?
-          request << "?value=#{value}" 
+          request << "?value=#{CGI.escape(value)}" 
         end
 
         @agent.get(request)
