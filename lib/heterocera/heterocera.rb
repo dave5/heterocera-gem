@@ -33,41 +33,34 @@ module Heterocera
     end
 
     def read(tags = [], suffix = "")
-      resp = get(READ, tags, "", suffix).body
-
-      case suffix
-      when XML
-        resp
-      when GZ
-        resp
-      else
-        JSON.parse(resp)
-      end
-
+      get_query READ, tags, suffix
     end
 
-    def write(tags = [], value = "")
+    def write!(tags = [], value = "")
       raise ArgumentError, 'You must provide a String or a File'  unless value.class == String || value.class == File
       raise ArgumentError, "You can't use wildcards when writing" if tags.include? '*'
 
       case value.class.to_s 
       when "String"
         if value.bytesize < 1024
-          resp = get(WRITE, tags, value).body
+          response, err_code = get(WRITE, tags, value)
         else
-          resp = post(WRITE, tags, value).body
+          response, err_code = post(WRITE, tags, value)
         end
       when "File"
         raise TypeError, 'Please open files in binary mode' unless value.binmode?
-        resp = post(WRITE, tags, value).body
+        response, err_code = post(WRITE, tags, value)
       end
 
-      JSON.parse resp
+      if err_code.blank?
+        JSON.parse response.body
+      else
+        err_code
+      end
     end
 
-    def take(guid)
-      resp = get(TAKE, [guid])
-      resp.code == "200"
+    def take!(tags = [], suffix = "")
+      get_query TAKE, tags, suffix
     end
 
     private
@@ -89,16 +82,41 @@ module Heterocera
           request << "?value=#{value}" 
         end
 
-        @agent.get request
+        [@agent.get(request), ""]
+
+      rescue Mechanize::ResponseCodeError => ex
+        ["", ex.response_code] 
       end
 
       def post tuple_space_operation, tags, value = ""
         raise TypeError, 'You must provide a value' unless value.present?
 
         request = generate_url tuple_space_operation, tags
-        @agent.post(request, {"value" => value})
 
+        [@agent.post(request, {"value" => value}), ""]
+
+      rescue Mechanize::ResponseCodeError => ex
+        ["", ex.response_code]
       end
+
+      def get_query(action, tags, suffix)
+
+        response, err_code = get(action, tags, "", suffix)
+
+        if err_code.blank?
+          resp = response.body
+          case suffix
+          when XML
+            resp
+          when GZ
+            resp
+          else
+            JSON.parse(resp)
+          end
+        else
+          err_code
+        end          
+      end 
   end
 
 end
