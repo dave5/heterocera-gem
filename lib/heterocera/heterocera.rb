@@ -6,6 +6,8 @@ require 'heterocera/ext'
 
 module Heterocera
 
+  class HeteroceraError < StandardError; end
+
   class Client
 
     READ  = "read"
@@ -43,20 +45,17 @@ module Heterocera
       case value.class.to_s 
       when "String"
         if value.bytesize < 1024
-          response, err_code = get(WRITE, tags, value)
+          response = get(WRITE, tags, value)
         else
-          response, err_code = post(WRITE, tags, value)
+          response = post(WRITE, tags, value)
         end
       when "File"
         raise TypeError, 'Please open files in binary mode' unless value.binmode?
-        response, err_code = post(WRITE, tags, value)
+        response = post(WRITE, tags, value)
       end
 
-      if err_code.blank?
-        JSON.parse response.body
-      else
-        err_code
-      end
+      JSON.parse response.body
+
     end
 
     def take!(tags = [], suffix = "")
@@ -82,10 +81,10 @@ module Heterocera
           request << "?value=#{value}" 
         end
 
-        [@agent.get(request), ""]
+        @agent.get(request)
 
       rescue Mechanize::ResponseCodeError => ex
-        ["", ex.response_code] 
+        raise HeteroceraError, "No data found" if ex.response_code == '404'
       end
 
       def post tuple_space_operation, tags, value = ""
@@ -93,30 +92,27 @@ module Heterocera
 
         request = generate_url tuple_space_operation, tags
 
-        [@agent.post(request, {"value" => value}), ""]
+        @agent.post(request, {"value" => value})
 
       rescue Mechanize::ResponseCodeError => ex
-        ["", ex.response_code]
+        raise HeteroceraError, "No data found" if ex.response_code == '404'
       end
 
       def get_query(action, tags, suffix)
 
-        response, err_code = get(action, tags, "", suffix)
+        response = get(action, tags, "", suffix).body
 
-        if err_code.blank?
-          resp = response.body
-          case suffix
-          when XML
-            resp
-          when GZ
-            resp
-          else
-            JSON.parse(resp)
-          end
+        case suffix
+        when XML
+          response
+        when GZ
+          response
         else
-          err_code
-        end          
+          JSON.parse(response)
+        end
+        
       end 
+
   end
 
 end
