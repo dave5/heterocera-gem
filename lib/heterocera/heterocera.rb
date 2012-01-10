@@ -44,7 +44,7 @@ module Heterocera
 
       case value.class.to_s 
       when "String"
-        if value.bytesize < 1024
+        if CGI.escape(value).bytesize < 1024
           response = get(WRITE, tags, value)
         else
           response = post(WRITE, tags, value)
